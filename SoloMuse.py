@@ -13,32 +13,42 @@ chord_map = {
     6: "F#", 7: "G", 8: "G#", 9: "A", 10: "A#", 11: "B"
 }
 
+notes_to_frequencies = {
+    "C": 261.63,
+    "C#": 277.18,
+    "D": 293.66,
+    "D#": 311.13,
+    "E": 329.63,
+    "F": 349.23,
+    "F#": 369.99,
+    "G": 392.00,
+    "G#": 415.30,
+    "A": 440.00,
+    "A#": 466.16,
+    "B": 493.88
+}
+
+
+def play_note(frequency, duration=1.0, sample_rate=44100, amplitude=0.5):
+    t = np.linspace(0, duration, int(sample_rate * duration), False)
+    wave = amplitude * np.sin(2 * np.pi * frequency * t)
+    sd.play(wave, sample_rate)
+    sd.wait()
+
 # 🎼 Chord Detection Function
 def detect_chord(audio, sr):
-    # Extract harmonic content using chroma features
     chroma = librosa.feature.chroma_stft(y=audio, sr=sr)
-    # Compute average chroma vector (aggregates harmonic presence over time)
     avg_chroma = np.mean(chroma, axis=1)
-
-    # Find the strongest frequency component (most prominent note)
     detected_note = np.argmax(avg_chroma)
     detected_chord = chord_map[detected_note]
-
     return detected_chord
 
-# 🎤 Audio Input Callback Function
 def audio_callback(indata, frames, time, status):
-    if status:
-        print(status)
-    # Convert stereo to mono
     audio_mono = np.mean(indata, axis=1)
-    # Detect chord
     detected_chord = detect_chord(audio_mono, SAMPLERATE)
-    print("B")
-    # Print the detected chord in real-time
+    play_note(notes_to_frequencies[detected_chord])
     print(f"🎼 Detected Chord: {detected_chord}")
 
-# 🎧 Start Live Guitar Capture with Real-Time Chord Detection
 with sd.InputStream(callback=audio_callback, channels=1, samplerate=SAMPLERATE, blocksize=BUFFER_SIZE):
     print("🎸 Listening for Chords... (Press Ctrl+C to stop)")
     while True:
