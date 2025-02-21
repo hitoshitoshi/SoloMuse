@@ -1,11 +1,14 @@
 import sounddevice as sd
 import numpy as np
 import librosa
+import time
 
 # 🎤 Audio Settings
 SAMPLERATE = 44100  # Standard sample rate for real-time audio
 BUFFER_SIZE = 2048  # Buffer size for audio chunks (lower = faster response)
 DURATION = 2  # Time window for chord detection
+
+first = False
 
 # 🎼 Chord Mapping Dictionary
 chord_map = {
@@ -29,13 +32,13 @@ notes_to_frequencies = {
 }
 
 
-def play_note(frequency, duration=1.0, sample_rate=44100, amplitude=0.5):
+def play_note(frequency, duration=0.5, sample_rate=44100, amplitude=0.5):
     t = np.linspace(0, duration, int(sample_rate * duration), False)
     wave = amplitude * np.sin(2 * np.pi * frequency * t)
     sd.play(wave, sample_rate)
     sd.wait()
 
-# 🎼 Chord Detection Function
+
 def detect_chord(audio, sr):
     chroma = librosa.feature.chroma_stft(y=audio, sr=sr)
     avg_chroma = np.mean(chroma, axis=1)
@@ -46,10 +49,10 @@ def detect_chord(audio, sr):
 def audio_callback(indata, frames, time, status):
     audio_mono = np.mean(indata, axis=1)
     detected_chord = detect_chord(audio_mono, SAMPLERATE)
-    play_note(notes_to_frequencies[detected_chord])
     print(f"🎼 Detected Chord: {detected_chord}")
 
 with sd.InputStream(callback=audio_callback, channels=1, samplerate=SAMPLERATE, blocksize=BUFFER_SIZE):
     print("🎸 Listening for Chords... (Press Ctrl+C to stop)")
     while True:
+        time.sleep(0.1)
         pass
