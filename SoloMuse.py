@@ -2,53 +2,67 @@ import sounddevice as sd
 import numpy as np
 import librosa
 import time
+import mido
+from mido import Message, MidiFile, MidiTrack
+import fluidsynth
 
 # 🎤 Audio Settings
 SAMPLERATE = 44100  # Standard sample rate for real-time audio
 BUFFER_SIZE = 2048  # Buffer size for audio chunks (lower = faster response)
 DURATION = 2  # Time window for chord detection
 
-first = False
+SOUNDFONT_PATH = "soundfont.sf2"
 
-# 🎼 Chord Mapping Dictionary
-chord_map = {
-    0: "C", 1: "C#", 2: "D", 3: "D#", 4: "E", 5: "F",
-    6: "F#", 7: "G", 8: "G#", 9: "A", 10: "A#", 11: "B"
-}
+fs = fluidsynth.Synth()
+fs.start()
+sfid = fs.sfload(SOUNDFONT_PATH)
+fs.program_select(0, sfid, 0, 0)
 
-notes_to_frequencies = {
-    "C": 261.63,
-    "C#": 277.18,
-    "D": 293.66,
-    "D#": 311.13,
-    "E": 329.63,
-    "F": 349.23,
-    "F#": 369.99,
-    "G": 392.00,
-    "G#": 415.30,
-    "A": 440.00,
-    "A#": 466.16,
-    "B": 493.88
-}
+MIDI_FILE = "generated_midi.mid"
 
+def create_midi(note):
+    """Creates a MIDI file with vibrato and pitch bends."""
+    mid = MidiFile()
+    track = MidiTrack()
+    mid.tracks.append(track)
+    velocity = 64
+    note += 60
+    duration = 480
+    track.append(Message('note_on', note=note, velocity=velocity, time=0))
+    for i in range(0, 8192, 512):
+        pitch_value = min(8191, 8191 + i)
+        track.append(Message('pitchwheel', pitch=pitch_value, time=20))
+    track.append(Message('pitchwheel', pitch=8191, time=100))
+    for i in range(10):
+        pitch_offset = 600 if i % 2 == 0 else -600
+        pitch_value = max(-8192, min(8191, 8191 + pitch_offset))
+        track.append(Message('pitchwheel', pitch=pitch_value, time=20))
+    track.append(Message('pitchwheel', pitch=0, time=0))
+    track.append(Message('note_off', note=note, velocity=velocity, time=duration))
+    mid.save(MIDI_FILE)
+    print(f"🎼 MIDI file '{MIDI_FILE}' created.")
 
-def play_note(frequency, duration=0.5, sample_rate=44100, amplitude=0.5):
-    t = np.linspace(0, duration, int(sample_rate * duration), False)
-    wave = amplitude * np.sin(2 * np.pi * frequency * t)
-    sd.play(wave, sample_rate)
-    sd.wait()
-
+def play_midi(midi_path):
+    mid = mido.MidiFile(midi_path)
+    for msg in mid.play():
+        if msg.type == 'note_on':
+            fs.noteon(0, msg.note, msg.velocity)
+        elif msg.type == 'note_off':
+            fs.noteoff(0, msg.note)
+        elif msg.type == 'pitchwheel':
+            fs.pitch_bend(0, msg.pitch)
 
 def detect_chord(audio, sr):
     chroma = librosa.feature.chroma_stft(y=audio, sr=sr)
     avg_chroma = np.mean(chroma, axis=1)
     detected_note = np.argmax(avg_chroma)
-    detected_chord = chord_map[detected_note]
-    return detected_chord
+    return detected_note
 
 def audio_callback(indata, frames, time, status):
     audio_mono = np.mean(indata, axis=1)
     detected_chord = detect_chord(audio_mono, SAMPLERATE)
+    create_midi(detected_chord)
+    play_midi(MIDI_FILE)
     print(f"🎼 Detected Chord: {detected_chord}")
 
 with sd.InputStream(callback=audio_callback, channels=1, samplerate=SAMPLERATE, blocksize=BUFFER_SIZE):
