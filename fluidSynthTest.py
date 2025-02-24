@@ -4,7 +4,7 @@ import fluidsynth
 fs = fluidsynth.Synth()
 fs.start()
 
-sfid = fs.sfload("electric.sf2")
+sfid = fs.sfload("acoustic.sf2")
 fs.program_select(0, sfid, 0, 0)
 fs.setting("synth.gain", 1.5)  
 

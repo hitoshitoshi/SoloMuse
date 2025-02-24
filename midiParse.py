@@ -8,15 +8,20 @@ def separate_guitar_tracks(midi_path, output_chords, output_solo):
     chords_midi = pretty_midi.PrettyMIDI()
     solo_midi = pretty_midi.PrettyMIDI()
 
-    for instrument in midi_data.instruments:
-        # Skip non-guitar instruments
-        instrument_name = pretty_midi.program_to_instrument_name(instrument.program)
-        if "Guitar" not in instrument_name and "guitar" not in instrument_name:
-            continue
+    chords_instrument_electric = pretty_midi.Instrument(program=28)
+    chords_instrument_acoustic = pretty_midi.Instrument(program=26)
+    solo_instrument_electric = pretty_midi.Instrument(program=28)
+    solo_instrument_acoustic = pretty_midi.Instrument(program=26)
 
-        # New instruments for chords and solo
-        chords_instrument = pretty_midi.Instrument(program=instrument.program)
-        solo_instrument = pretty_midi.Instrument(program=instrument.program)
+    for instrument in set(midi_data.instruments):
+        # Skip non-guitar instruments
+        chords_instrument = chords_instrument_acoustic
+        solo_instrument = solo_instrument_acoustic
+        if instrument.program == 25 or instrument.program == 26:
+            chords_instrument = chords_instrument_electric
+            solo_instrument = solo_instrument_electric
+        elif instrument.program > 32 or instrument.program < 25:
+            continue
 
         # Sort notes by start time
         sorted_notes = sorted(instrument.notes, key=lambda note: note.start)
