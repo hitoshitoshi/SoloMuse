@@ -11,7 +11,7 @@ SAMPLERATE = 44100  # Standard sample rate for real-time audio
 BUFFER_SIZE = 2048  # Buffer size for audio chunks (lower = faster response)
 DURATION = 2  # Time window for chord detection
 
-SOUNDFONT_PATH = "soundfont.sf2"
+SOUNDFONT_PATH = "acoustic.sf2"
 
 fs = fluidsynth.Synth()
 fs.start()
@@ -26,8 +26,8 @@ def create_midi(note):
     track = MidiTrack()
     mid.tracks.append(track)
     velocity = 64
-    note += 60
-    duration = 480
+    note += 50
+    duration = 1000
     track.append(Message('note_on', note=note, velocity=velocity, time=0))
     for i in range(0, 8192, 512):
         pitch_value = min(8191, 8191 + i)
@@ -40,7 +40,6 @@ def create_midi(note):
     track.append(Message('pitchwheel', pitch=0, time=0))
     track.append(Message('note_off', note=note, velocity=velocity, time=duration))
     mid.save(MIDI_FILE)
-    print(f"🎼 MIDI file '{MIDI_FILE}' created.")
 
 def play_midi(midi_path):
     mid = mido.MidiFile(midi_path)
@@ -68,5 +67,5 @@ def audio_callback(indata, frames, time, status):
 with sd.InputStream(callback=audio_callback, channels=1, samplerate=SAMPLERATE, blocksize=BUFFER_SIZE):
     print("🎸 Listening for Chords... (Press Ctrl+C to stop)")
     while True:
-        time.sleep(0.1)
+        time.sleep(0.01)
         pass
