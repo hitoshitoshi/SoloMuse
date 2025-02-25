@@ -51,20 +51,10 @@ def separate_guitar_tracks(midi_path, output_chords, output_solo):
         else:
             solo_instrument.notes.extend(simultaneous_notes)
 
-        # Add instruments to respective MIDI files
-        if chords_instrument.notes:
-            chords_midi.instruments.append(chords_instrument)
-        if solo_instrument.notes:
-            solo_midi.instruments.append(solo_instrument)
+    chords_midi.instruments.append(chords_instrument_acoustic)
+    chords_midi.instruments.append(chords_instrument_electric)
+    solo_midi.instruments.append(solo_instrument_acoustic)
+    solo_midi.instruments.append(solo_instrument_electric)
 
-    # Save new MIDI files
-    if chords_midi.instruments:
-        chords_midi.write(output_chords)
-        print(f"Chords saved to {output_chords}")
-    if solo_midi.instruments:
-        solo_midi.write(output_solo)
-        print(f"Solo saved to {output_solo}")
-
-# Example usage
 
 separate_guitar_tracks("input_guitar.mid", "guitar_chords.mid", "guitar_solo.mid")
