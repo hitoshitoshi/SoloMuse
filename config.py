@@ -31,4 +31,4 @@ LSTM_UNITS       = 64
 
 # Training
 BATCH_SIZE = 32
-EPOCHS = 5
+EPOCHS = 20

@@ -5,6 +5,7 @@ import numpy as np
 import tensorflow as tf
 import fluidsynth
 import time
+import random
 
 from config import (
     MIDI_FOLDER,
@@ -13,6 +14,7 @@ from config import (
     BATCH_SIZE,
     EPOCHS,
     NOTE_VOCAB_SIZE,
+    REST_TOKEN,
     LOWEST_PITCH
 )
 from data_preparation import build_training_dataset
@@ -127,25 +129,6 @@ def main():
         current_note = next_note
 
     print("Generated notes:", generated_notes)
-
-    fs = fluidsynth.Synth()
-    fs.start()
-
-    sfid = fs.sfload("acoustic.sf2")
-    fs.program_select(0, sfid, 0, 0)
-    fs.setting("synth.gain", 1.5)  
-
-    for note in generated_notes:
-        if note != 0 and note != 45:
-            fs.noteon(0, note + LOWEST_PITCH, 64)
-
-        time.sleep(0.5)
-        if note != 0 and note != 45:
-            fs.noteoff(0, note)
-
-        time.sleep(0)
-
-    fs.delete() 
 
 
 
