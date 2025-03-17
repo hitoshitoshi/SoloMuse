@@ -3,12 +3,11 @@ import numpy as np
 import mido
 import tensorflow as tf
 import fluidsynth
-import random
 
 from config import LOWEST_PITCH, CHORD_VECTOR_SIZE, NOTE_VOCAB_SIZE, REST_TOKEN
 from models import build_unrolled_model, build_single_step_model
 
-def sample_note(prob_dist, temperature=1.0):
+def sample_note(prob_dist, temperature=1.1):
     """Randomly sample a note token from a probability distribution."""
     log_dist = np.log(prob_dist + 1e-9) / temperature
     exp_dist = np.exp(log_dist)
@@ -31,16 +30,9 @@ def main():
         except Exception as e:
             print(f"Skipping layer '{rt_layer.name}'")
     rt_model.get_layer("lstm").reset_states()
-    current_note = REST_TOKEN  # starting token (REST_TOKEN can serve as a neutral starting point)
 
-    # 2. Setup MIDI Input (using mido)
-    # List available MIDI input ports and choose one.
-    print("Available MIDI input ports:")
+    # 2. Setup MIDI Input
     input_ports = mido.get_input_names()
-    for p in input_ports:
-        print(p)
-    
-    # Replace 'Your MIDI Input' with the actual port name or use the first available one.
     if input_ports:
         inport = mido.open_input(input_ports[0])
     else:
@@ -52,12 +44,13 @@ def main():
     fs.start()
     sfid = fs.sfload("acoustic.sf2")
     fs.program_select(0, sfid, 0, 0)
-    fs.setting("synth.gain", 1.5)
 
     # Initialize the chord vector (multi-hot), length = CHORD_VECTOR_SIZE.
     chord_vector = np.zeros((CHORD_VECTOR_SIZE,), dtype=np.float32)
-    # Define time interval for each generation step (in seconds).
-    step_interval = 0.15
+    step_interval = 0.15  # Interval between note generation
+
+    current_note = 20  # Start with REST
+    last_played_note = None  # To track currently played note
 
     print("Starting real-time generation with MIDI input and FluidSynth output.")
     print("Press Ctrl+C to stop.")
@@ -80,19 +73,28 @@ def main():
             note_input = np.array([[current_note]], dtype=np.int32)
             preds, _, _ = rt_model.predict([note_input, chord_input], verbose=0)
             preds = preds[0]  # shape: (NOTE_VOCAB_SIZE,)
-            next_note = sample_note(preds, temperature=1.0)
-            current_note = next_note  # update for next iteration
+            next_note = sample_note(preds, temperature=1.1)
 
-            # 6. Output the generated note using FluidSynth.
-            if next_note != REST_TOKEN:
-                midi_pitch = next_note + LOWEST_PITCH
-                print(f"Playing note: {midi_pitch}")
-                fs.noteon(0, midi_pitch, 64)
-                time.sleep(0.1)
-                fs.noteoff(0, midi_pitch)
+            # If next_note is the same as last_played_note, sustain it
+            if next_note == last_played_note:
+                print(f"Sustaining note: {next_note + LOWEST_PITCH}")
             else:
-                print("Rest")
-            
+                # Turn off the last played note if it's different
+                if last_played_note is not None and last_played_note != REST_TOKEN:
+                    fs.noteoff(0, last_played_note + LOWEST_PITCH)
+                
+                # Play new note if it's not a rest
+                if next_note != REST_TOKEN:
+                    midi_pitch = next_note + LOWEST_PITCH
+                    print(f"Playing new note: {midi_pitch}")
+                    fs.noteon(0, midi_pitch, 64)
+
+                # Update last played note
+                last_played_note = next_note
+
+            # Update the current note for the next step
+            current_note = next_note
+
             # Wait until next step.
             time.sleep(step_interval)
     except KeyboardInterrupt:

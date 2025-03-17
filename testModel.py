@@ -80,7 +80,7 @@ def chord_array_to_midi_instrument(chord_array, tempo_us_per_beat=500000, progra
 ###############################################################################
 # Convert generated tokens to a lead instrument, merging consecutive ties
 ###############################################################################
-def generated_tokens_to_midi_instrument(generated_tokens, tempo_us_per_beat=500000, program=26):
+def generated_tokens_to_midi_instrument(generated_tokens, tempo_us_per_beat=402685, program=26):
     """
     Converts a list of generated note tokens into a PrettyMIDI Instrument.
     Consecutive identical tokens (non-rest) are merged into one sustained note.
@@ -173,7 +173,7 @@ def add_generated_notes_to_midi(input_midi_path, output_midi_path, temperature=1
         current_token = next_token
 
     # Use a fixed tempo (default 120 BPM, 500000 us/beat)
-    tempo_us_per_beat = 500000
+    tempo_us_per_beat = 402685
 
     # Convert chord array into a chord track (merging consecutive identical chords)
     chord_instrument = chord_array_to_midi_instrument(chords_arr, tempo_us_per_beat=tempo_us_per_beat, program=26)
@@ -194,4 +194,4 @@ def add_generated_notes_to_midi(input_midi_path, output_midi_path, temperature=1
 if __name__ == "__main__":
     input_mid  = "HC.mid"            # Input MIDI file containing the original chord information.
     output_mid = "HC_with_generated.mid"  # Output file to be created.
-    add_generated_notes_to_midi(input_mid, output_mid, temperature=1.0)
+    add_generated_notes_to_midi(input_mid, output_mid, temperature=1.1)

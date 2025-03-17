@@ -3,9 +3,6 @@
 import os
 import numpy as np
 import tensorflow as tf
-import fluidsynth
-import time
-import random
 
 from config import (
     MIDI_FOLDER,
@@ -20,7 +17,7 @@ from config import (
 from data_preparation import build_training_dataset
 from models import build_unrolled_model, build_single_step_model
 
-def sample_note(prob_dist, temperature=1.0):
+def sample_note(prob_dist, temperature=1.1):
     """Randomly sample a note token from a probability distribution."""
     log_dist = np.log(prob_dist + 1e-9) / temperature
     exp_dist = np.exp(log_dist)
