@@ -37,7 +37,6 @@ def main():
         print("No cached dataset found. Building dataset from MIDI folder...")
         X_notes, X_chords, y_notes = build_training_dataset(
             MIDI_FOLDER,
-            num_files=NUM_FILES,
             T=SEQUENCE_LENGTH
         )
         if X_notes is None:
@@ -103,32 +102,6 @@ def main():
             print(f"Copied weights for layer '{lname}'")
         except:
             print(f"Skipping layer '{lname}'")
-
-    ############################################################################
-    # 4) Demonstrate Generation
-    ############################################################################
-    print("Generating a short sequence with the real-time model...")
-
-    # Reset states
-    rt_model.get_layer("lstm").reset_states()
-
-    generated_notes = []
-    current_note = 0  # e.g. start token
-    chord_vec_size = rt_model.input_shape[1][2]  # the 3rd dimension in (1, 1, CHORD_VECTOR_SIZE)
-    dummy_chords = np.random.rand(16, chord_vec_size).astype(np.float32)
-
-    for t in range(16):
-        note_input = np.array([[current_note]], dtype=np.int32)
-        chord_input = dummy_chords[t].reshape(1,1,-1)
-
-        preds, h, c = rt_model.predict([note_input, chord_input], verbose=0)
-        preds = preds[0]
-
-        next_note = sample_note(preds, temperature=1.0)
-        generated_notes.append(next_note)
-        current_note = next_note
-
-    print("Generated notes:", generated_notes)
 
 
 

@@ -8,7 +8,8 @@ from config import (
     NOTE_EMBED_DIM,
     CHORD_HIDDEN_DIM,
     LSTM_UNITS,
-    CHORD_VECTOR_SIZE
+    CHORD_VECTOR_SIZE,
+    LEARNING_RATE
 )
 
 def build_unrolled_model():
@@ -45,8 +46,9 @@ def build_unrolled_model():
     note_probs = layers.Activation("softmax")(note_logits)
 
     model = Model([notes_in, chords_in], note_probs)
+    optimizer = tf.keras.optimizers.Adam(learning_rate=LEARNING_RATE)  # set your desired learning rate
     model.compile(
-        optimizer='adam',
+        optimizer=optimizer,
         loss='sparse_categorical_crossentropy',
         metrics=['accuracy']
     )
@@ -96,8 +98,9 @@ def build_single_step_model():
         inputs=[notes_in_rt, chords_in_rt],
         outputs=[note_probs_rt, state_h_rt, state_c_rt]
     )
+    optimizer = tf.keras.optimizers.Adam(learning_rate=LEARNING_RATE)
     rt_model.compile(
-        optimizer='adam',
+        optimizer=optimizer,
         loss='sparse_categorical_crossentropy'
     )
     return rt_model

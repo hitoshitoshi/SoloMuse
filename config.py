@@ -4,7 +4,7 @@
 
 # MIDI folder containing 1.mid..5000.mid
 MIDI_FOLDER = "./midi_files/"
-NUM_FILES = 5050
+NUM_FILES = 1300000
 
 # Timing / Tempo
 DEFAULT_BPM = 120
@@ -32,3 +32,4 @@ LSTM_UNITS       = 64
 # Training
 BATCH_SIZE = 32
 EPOCHS = 20
+LEARNING_RATE = 0.001

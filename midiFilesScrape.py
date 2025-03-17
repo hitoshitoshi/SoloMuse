@@ -1,35 +1,38 @@
 import os
-import requests
+from datasets import load_dataset
 
-# Define base URLs
-BASE_URL = "https://www.midiworld.com"
-DOWNLOAD_URL = BASE_URL + "/download/"
+def download_full_gigamidi(subset="v1.0.0", output_dir="gigamidi_midifiles2"):
+    """
+    Downloads the full GigaMIDI dataset (all splits combined) for the specified subset.
 
-# Directory to save MIDI files
-SAVE_DIR = "midi_files"
-os.makedirs(SAVE_DIR, exist_ok=True)
-
-# Fetch MIDI file listing
-response = requests.get(BASE_URL)
-if response.status_code != 200:
-    print("Failed to fetch MIDIWorld homepage.")
-    exit()
-
-# Download all MIDI files
-for midi_id in range(0,20000):
-    midi_url = DOWNLOAD_URL + str(midi_id)
-    midi_path = os.path.join(SAVE_DIR, f"{midi_id}.mid")
-
-    try:
-        midi_response = requests.get(midi_url, stream=True)
-        if midi_response.status_code == 200:
-            with open(midi_path, "wb") as f:
-                for chunk in midi_response.iter_content(1024):
-                    f.write(chunk)
-            print(f"Downloaded: {midi_path}")
+    Args:
+        subset (str): The dataset subset to download (e.g., "all-instruments-with-drums", "drums-only", "no-drums").
+        output_dir (str): Directory where the MIDI files will be saved.
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    print("Loading the full dataset (train+validation+test)...")
+    dataset = load_dataset("Metacreation/GigaMIDI", subset, trust_remote_code=True,
+                           split="train+validation+test")
+    
+    print("Starting download of MIDI files...")
+    for i, sample in enumerate(dataset):
+        if sample["instrument_category"] != "all-instruments-with-drums":
+            continue
+        file_hash = sample["md5"]
+        # Check if "music" is a dict containing MIDI bytes or if it's already bytes
+        if isinstance(sample["music"], dict):
+            midi_bytes = sample["music"]["bytes"]
         else:
-            print(f"Failed to download {midi_id}")
-    except Exception as e:
-        print(f"Error downloading {midi_id}: {e}")
+            midi_bytes = sample["music"]
+        
+        file_path = os.path.join(output_dir, f"{file_hash}.mid")
+        with open(file_path, "wb") as f:
+            f.write(midi_bytes)
+        
+        if (i + 1) % 1000 == 0:
+            print(f"{i + 1} files downloaded...")
+    
+    print("Download completed.")
 
-print("All downloads completed.")
+if __name__ == "__main__":
+    download_full_gigamidi()
