@@ -34,7 +34,7 @@ def main():
     # 2. Setup MIDI Input
     input_ports = mido.get_input_names()
     if input_ports:
-        inport = mido.open_input(input_ports[0])
+        inport = mido.open_input(input_ports[1])
     else:
         print("No MIDI input ports available. Exiting.")
         return
@@ -44,12 +44,13 @@ def main():
     fs.start()
     sfid = fs.sfload("acoustic.sf2")
     fs.program_select(0, sfid, 0, 0)
+    fs.setting('synth.gain', 1.5)
 
     # Initialize the chord vector (multi-hot), length = CHORD_VECTOR_SIZE.
     chord_vector = np.zeros((CHORD_VECTOR_SIZE,), dtype=np.float32)
     step_interval = 0.15  # Interval between note generation
 
-    current_note = 20  # Start with REST
+    current_note = REST_TOKEN  # Start with REST
     last_played_note = None  # To track currently played note
 
     print("Starting real-time generation with MIDI input and FluidSynth output.")
@@ -70,15 +71,14 @@ def main():
 
             # 5. Generate next note using the current chord vector.
             chord_input = chord_vector.reshape((1, 1, CHORD_VECTOR_SIZE))
+            print(chord_input)
             note_input = np.array([[current_note]], dtype=np.int32)
             preds, _, _ = rt_model.predict([note_input, chord_input], verbose=0)
             preds = preds[0]  # shape: (NOTE_VOCAB_SIZE,)
             next_note = sample_note(preds, temperature=1.1)
 
             # If next_note is the same as last_played_note, sustain it
-            if next_note == last_played_note:
-                print(f"Sustaining note: {next_note + LOWEST_PITCH}")
-            else:
+            if next_note != last_played_note:
                 # Turn off the last played note if it's different
                 if last_played_note is not None and last_played_note != REST_TOKEN:
                     fs.noteoff(0, last_played_note + LOWEST_PITCH)
@@ -86,7 +86,6 @@ def main():
                 # Play new note if it's not a rest
                 if next_note != REST_TOKEN:
                     midi_pitch = next_note + LOWEST_PITCH
-                    print(f"Playing new note: {midi_pitch}")
                     fs.noteon(0, midi_pitch, 64)
 
                 # Update last played note

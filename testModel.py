@@ -25,7 +25,7 @@ def sample_note(prob_dist, temperature=1.0):
 ###############################################################################
 # Convert chord array to a chord track by merging consecutive identical chords
 ###############################################################################
-def chord_array_to_midi_instrument(chord_array, tempo_us_per_beat=500000, program=32):
+def chord_array_to_midi_instrument(chord_array, tempo_us_per_beat=674157, program=32):
     """
     Converts a chord array of shape (time_steps, CHORD_VECTOR_SIZE) into a pretty_midi.Instrument.
     For each time step, the chord vector is assumed to be multi-hot (values > 0.5 indicate active pitches).
@@ -160,7 +160,7 @@ def add_generated_notes_to_midi(input_midi_path, output_midi_path, temperature=1
     # Generate note tokens for each time step.
     rt_model.get_layer("lstm").reset_states()
     generated_tokens = []
-    current_token = 0  # seed token
+    current_token = REST_TOKEN  # seed token
     for t in range(total_steps):
         chord_vec = chords_arr[t]
         chord_vec_input = chord_vec.reshape((1, 1, chord_vec.shape[-1])).astype(np.float32)
@@ -173,7 +173,7 @@ def add_generated_notes_to_midi(input_midi_path, output_midi_path, temperature=1
         current_token = next_token
 
     # Use a fixed tempo (default 120 BPM, 500000 us/beat)
-    tempo_us_per_beat = 402685
+    tempo_us_per_beat = 674157
 
     # Convert chord array into a chord track (merging consecutive identical chords)
     chord_instrument = chord_array_to_midi_instrument(chords_arr, tempo_us_per_beat=tempo_us_per_beat, program=26)
@@ -192,6 +192,6 @@ def add_generated_notes_to_midi(input_midi_path, output_midi_path, temperature=1
 # Example usage
 ###############################################################################
 if __name__ == "__main__":
-    input_mid  = "HC.mid"            # Input MIDI file containing the original chord information.
-    output_mid = "HC_with_generated.mid"  # Output file to be created.
-    add_generated_notes_to_midi(input_mid, output_mid, temperature=1.1)
+    input_mid  = "oasis.mid"            # Input MIDI file containing the original chord information.
+    output_mid = "oasis_with_generated.mid"  # Output file to be created.
+    add_generated_notes_to_midi(input_mid, output_mid, temperature=1.0)
