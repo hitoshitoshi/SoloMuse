@@ -44,9 +44,9 @@ def main():
     else:
         print(f"Loading dataset from cached file: {DATASET_CACHE}")
         data = np.load(DATASET_CACHE)
-        X_notes  = data["X_notes"]
-        X_chords = data["X_chords"]
-        y_notes  = data["y_notes"]
+        X_notes  = data["X_notes"] #bass
+        X_chords = data["X_chords"] #rest of midi file
+        y_notes  = data["y_notes"] #exoected output
         print("Dataset loaded successfully.")
 
     print("Dataset shapes:")

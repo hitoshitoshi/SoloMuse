@@ -29,6 +29,7 @@ def notes_overlap(note_a, note_b, min_overlap=0.03):
     overlap = min(note_a.end, note_b.end) - max(note_a.start, note_b.start)
     return overlap >= min_overlap
 
+#fix this function to switch everything that is guitar to bass
 def separate_guitar_tracks_improved_in_memory(
     midi_path,
     start_time_threshold=0.05,
@@ -43,10 +44,10 @@ def separate_guitar_tracks_improved_in_memory(
     """
     midi_data = pretty_midi.PrettyMIDI(midi_path)
     chord_instrument = pretty_midi.Instrument(program=28)  # e.g., Electric Guitar (Jazz)
-    solo_instrument  = pretty_midi.Instrument(program=26)  # e.g., Electric Guitar (Clean)
+    solo_instrument  = pretty_midi.Instrument(program=34)  # e.g., Electric Guitar (Clean) change to bass
 
     for instrument in midi_data.instruments:
-        if not (25 <= instrument.program <= 32):
+        if not (33 <= instrument.program <= 40):
             continue
 
         sorted_notes = sorted(instrument.notes, key=lambda n: n.start)

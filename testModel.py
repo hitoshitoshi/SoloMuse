@@ -80,7 +80,7 @@ def chord_array_to_midi_instrument(chord_array, tempo_us_per_beat=674157, progra
 ###############################################################################
 # Convert generated tokens to a lead instrument, merging consecutive ties
 ###############################################################################
-def generated_tokens_to_midi_instrument(generated_tokens, tempo_us_per_beat=402685, program=26):
+def generated_tokens_to_midi_instrument(generated_tokens, tempo_us_per_beat=402685, program=34):
     """
     Converts a list of generated note tokens into a PrettyMIDI Instrument.
     Consecutive identical tokens (non-rest) are merged into one sustained note.
@@ -178,7 +178,7 @@ def add_generated_notes_to_midi(input_midi_path, output_midi_path, temperature=1
     # Convert chord array into a chord track (merging consecutive identical chords)
     chord_instrument = chord_array_to_midi_instrument(chords_arr, tempo_us_per_beat=tempo_us_per_beat, program=26)
     # Convert generated tokens into a lead track (merging consecutive ties)
-    lead_instrument  = generated_tokens_to_midi_instrument(generated_tokens, tempo_us_per_beat=tempo_us_per_beat, program=26)
+    lead_instrument  = generated_tokens_to_midi_instrument(generated_tokens, tempo_us_per_beat=tempo_us_per_beat, program=34)
 
     # Create a new PrettyMIDI object with only the chord track and generated lead track
     pm_out = pretty_midi.PrettyMIDI()
@@ -192,6 +192,6 @@ def add_generated_notes_to_midi(input_midi_path, output_midi_path, temperature=1
 # Example usage
 ###############################################################################
 if __name__ == "__main__":
-    input_mid  = "oasis.mid"            # Input MIDI file containing the original chord information.
-    output_mid = "oasis_with_generated.mid"  # Output file to be created.
+    input_mid  = "money.mid"            # Input MIDI file containing the original chord information.
+    output_mid = "money_with_generated.mid"  # Output file to be created.
     add_generated_notes_to_midi(input_mid, output_mid, temperature=1.0)
