@@ -7,7 +7,7 @@ import fluidsynth
 from config import LOWEST_PITCH, CHORD_VECTOR_SIZE, NOTE_VOCAB_SIZE, REST_TOKEN
 from models import build_unrolled_model, build_single_step_model
 
-def sample_note(prob_dist, temperature=1.1):
+def sample_note(prob_dist, temperature=1.0):
     """Randomly sample a note token from a probability distribution."""
     log_dist = np.log(prob_dist + 1e-9) / temperature
     exp_dist = np.exp(log_dist)
@@ -71,11 +71,10 @@ def main():
 
             # 5. Generate next note using the current chord vector.
             chord_input = chord_vector.reshape((1, 1, CHORD_VECTOR_SIZE))
-            print(chord_input)
             note_input = np.array([[current_note]], dtype=np.int32)
             preds, _, _ = rt_model.predict([note_input, chord_input], verbose=0)
             preds = preds[0]  # shape: (NOTE_VOCAB_SIZE,)
-            next_note = sample_note(preds, temperature=1.1)
+            next_note = sample_note(preds, temperature=1.0)
 
             # If next_note is the same as last_played_note, sustain it
             if next_note != last_played_note:

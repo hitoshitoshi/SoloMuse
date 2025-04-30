@@ -192,6 +192,6 @@ def add_generated_notes_to_midi(input_midi_path, output_midi_path, temperature=1
 # Example usage
 ###############################################################################
 if __name__ == "__main__":
-    input_mid  = "oasis.mid"            # Input MIDI file containing the original chord information.
-    output_mid = "oasis_with_generated.mid"  # Output file to be created.
+    input_mid  = "TP.mid"            # Input MIDI file containing the original chord information.
+    output_mid = "TP_with_generated.mid"  # Output file to be created.
     add_generated_notes_to_midi(input_mid, output_mid, temperature=1.0)
