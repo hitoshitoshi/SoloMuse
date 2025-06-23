@@ -114,7 +114,7 @@ The script will detect your MIDI device and begin generating a melody in respons
 
 To generate a new melody for an existing MIDI file that contains chords:
 
-1.  Place your input MIDI file in the root directory (e.g., `TP.mid`).
+1.  Place your input MIDI file in the root directory (e.g., `Test.mid`).
 2.  Run the `testModel.py` script:
 
 <!-- end list -->
@@ -123,7 +123,7 @@ To generate a new melody for an existing MIDI file that contains chords:
 python testModel.py
 ```
 
-The script will process `TP.mid`, generate a new solo track, and save the output to `output/TP_with_generated.mid`.
+The script will process `Test.mid`, generate a new solo track, and save the output to `output/Test_with_generated.mid`.
 
 ## Project Structure
 
