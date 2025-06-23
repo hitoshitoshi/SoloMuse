@@ -4,8 +4,8 @@ import mido
 import tensorflow as tf
 import fluidsynth
 
-from config import LOWEST_PITCH, CHORD_VECTOR_SIZE, NOTE_VOCAB_SIZE, REST_TOKEN
-from models import build_unrolled_model, build_single_step_model
+from solomuse.config import LOWEST_PITCH, CHORD_VECTOR_SIZE, NOTE_VOCAB_SIZE, REST_TOKEN
+from solomuse.models import build_unrolled_model, build_single_step_model
 
 def sample_note(prob_dist, temperature=1.0):
     """Randomly sample a note token from a probability distribution."""

@@ -4,7 +4,7 @@ import os
 import numpy as np
 import tensorflow as tf
 
-from config import (
+from solomuse.config import (
     MIDI_FOLDER,
     NUM_FILES,
     SEQUENCE_LENGTH,
@@ -14,8 +14,8 @@ from config import (
     REST_TOKEN,
     LOWEST_PITCH
 )
-from data_preparation import build_training_dataset
-from models import build_unrolled_model, build_single_step_model
+from solomuse.data_preparation import build_training_dataset
+from solomuse.models import build_unrolled_model, build_single_step_model
 
 def sample_note(prob_dist, temperature=1.1):
     """Randomly sample a note token from a probability distribution."""
@@ -28,7 +28,7 @@ def main():
     ############################################################################
     # 1) Load or Build Dataset
     ############################################################################
-    DATASET_CACHE = "cached_dataset.npz"
+    DATASET_CACHE = "data/cache/cached_dataset.npz"
     
     if not os.path.exists(DATASET_CACHE):
         print("No cached dataset found. Building dataset from MIDI folder...")
@@ -57,7 +57,7 @@ def main():
     ############################################################################
     # 2) Train or Load the Unrolled Model Weights
     ############################################################################
-    WEIGHTS_PATH = "unrolled_lstm.weights.h5"
+    WEIGHTS_PATH = "saved_models/unrolled_lstm.weights.h5"
     
     # Build the unrolled model (same architecture either way)
     unrolled_model = build_unrolled_model()

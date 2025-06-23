@@ -5,8 +5,8 @@ import numpy as np
 import pretty_midi
 import tensorflow as tf
 
-import data_preparation
-import models
+import solomuse.data_preparation as data_preparation
+import solomuse.models as models
 
 # Configuration constants (could also be imported from config.py)
 WEIGHTS_PATH       = "unrolled_lstm.weights.h5"
@@ -193,5 +193,5 @@ def add_generated_notes_to_midi(input_midi_path, output_midi_path, temperature=1
 ###############################################################################
 if __name__ == "__main__":
     input_mid  = "TP.mid"            # Input MIDI file containing the original chord information.
-    output_mid = "TP_with_generated.mid"  # Output file to be created.
+    output_mid = "output/TP_with_generated.mid"  # Output file to be created.
     add_generated_notes_to_midi(input_mid, output_mid, temperature=1.0)

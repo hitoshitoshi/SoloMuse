@@ -1,3 +1,18 @@
-soundfonts/acoustic.sf2
-cached_dataset.npz
-soundfonts/electric.sf2
+# Python cache
+__pycache__/
+*.pyc
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+
+# Data, models, and output
+/data/
+/output/
+/saved_models/
+*.npz
+
+# Soundfonts
+soundfonts/
+*.sf2
