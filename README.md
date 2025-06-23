@@ -85,7 +85,9 @@ python scripts/midi_files_scrape.py
 
 ### 3\. Training the Model
 
-To train the model on the downloaded data, run the `train.py` script:
+A pre-trained model is already given in `saved_models/unrolled_lstm.weights.h5`.
+
+To train the model on the downloaded data, delete `saved_models/unrolled_lstm.weights.h5`, and run the `train.py` script:
 
 ```bash
 python train.py
