@@ -7,10 +7,9 @@ __pycache__/
 .idea/
 .DS_Store
 
-# Data, models, and output
+# Data and output
 /data/
 /output/
-/saved_models/
 *.npz
 
 # Soundfonts
