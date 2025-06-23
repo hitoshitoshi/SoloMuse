@@ -83,8 +83,6 @@ The model is trained on the GigaMIDI dataset. You can download the necessary MID
 python scripts/midi_files_scrape.py
 ```
 
-This will download the MIDI files into a directory named `gigamidi_midifiles2/`. It is recommended to move these files into a `data/midi/` directory, as specified in `solomuse/config.py`.
-
 ### 3\. Training the Model
 
 To train the model on the downloaded data, run the `train.py` script:
