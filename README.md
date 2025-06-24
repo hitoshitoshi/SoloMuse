@@ -1,131 +1,123 @@
-# SoloMuse
+# SoloMuse: Real-Time AI Melody Generator
 
-SoloMuse is a real-time, chord-conditioned music generation system using a Long Short-Term Memory (LSTM) network built with TensorFlow/Keras. It learns the relationship between chord progressions and melodic lines from a corpus of MIDI files and can generate new monophonic melodies in real-time based on live MIDI chord input.
+SoloMuse is a deep learning system that generates monophonic melodies in real-time, conditioned on live chord input from a MIDI controller. It uses a Long Short-Term Memory (LSTM) network built in TensorFlow to learn the relationship between chord progressions and melodic lines from the GigaMIDI dataset.
 
-## Features
+## Key Features
 
-  * **Real-time Music Generation**: Plays a continuous stream of music that adapts to the chords you play on a MIDI controller.
-  * **Chord-Conditioned Model**: The melody generated is guided by the underlying chord progressions.
-  * **Data-Driven**: Trained on the GigaMIDI dataset to learn patterns from a vast collection of music.
-  * **Offline Mode**: Includes a script to process an existing MIDI file and overlay a newly generated solo melody.
+  * **Real-Time Melody Generation**: Listens to chords played on a MIDI device and generates a harmonically-aware solo voice on the fly.
+  * **Offline Solo Composition**: Can take an existing MIDI file, analyze its chord progression, and write a brand new solo track for it.
+  * **Adaptive AI Model**: The generated melody is not random; it is guided by the underlying chord progressions you play.
+  * **Data-Driven**: Trained on the extensive GigaMIDI dataset to learn patterns from a vast corpus of music.
+  * **Customizable**: All hyperparameters, from model architecture to pitch ranges, are centralized in a configuration file for easy modification.
 
 ## How It Works
 
-The project is composed of several key components:
+The project is a complete pipeline from data acquisition to real-time inference:
 
-1.  **Data Preparation (`solomuse/data_preparation.py`)**:
+1.  **Data Acquisition (`scripts/midi_files_scrape.py`)**: A script is provided to automatically download the GigaMIDI dataset, which forms the training corpus for the model.
 
-      * MIDI files are parsed to separate chord tracks from solo (monophonic) tracks. This is achieved by analyzing the timing and overlap of notes.
-      * Both the solo and chord parts are quantized into a sequence of 16th-note time steps.
-      * Solo melodies are represented as a sequence of note tokens, including a special token for rests.
-      * Chords are represented as a multi-hot vector for each time step, indicating which notes are active.
+2.  **Data Preparation (`solomuse/data_preparation.py`)**: This is the core of the data pipeline.
 
-2.  **Model Architecture (`solomuse/models.py`)**:
+      * MIDI files are parsed to intelligently separate chordal parts from monophonic solo lines by analyzing note timing and overlap.
+      * The solo and chord parts are quantized into a sequence of 16th-note time steps.
+      * Solo melodies are converted into a sequence of integer tokens (representing specific pitches and rests).
+      * Chords are transformed into a multi-hot vector for each time step, creating a rich harmonic context.
+      * The dataset is augmented by transposing each piece into multiple keys, expanding the training data significantly.
 
-      * The core of the project is a chord-conditional LSTM network.
-      * The model takes two inputs at each time step: the previous note played (as an embedding) and the current chord vector.
-      * It's designed in two forms:
-          * **Unrolled Model**: Used for efficient, offline training on sequences of music data.
-          * **Single-Step Model**: A stateful version of the LSTM used for real-time generation, where it predicts one note at a time while maintaining its internal state.
+3.  **Model Architecture (`solomuse/models.py`)**: The system uses a dual-model architecture for efficiency:
 
-3.  **Training (`train.py`)**:
+      * **Unrolled Model**: Used for offline training. It processes entire sequences of notes and chords at once, allowing for fast, parallelized training on a GPU.
+      * **Single-Step Model**: A stateful, real-time version of the LSTM. It predicts one note at a time while preserving its internal state (memory), making it perfect for interactive generation.
 
-      * The `train.py` script builds a dataset from a folder of MIDI files, creating sequences of a fixed length.
-      * It trains the unrolled LSTM model on this dataset and saves the learned weights.
+4.  **Training (`train.py`)**: This script orchestrates the training process. It builds the dataset from the MIDI files (caching the result for future runs), trains the unrolled LSTM model, and saves the learned weights.
 
-4.  **Real-Time Generation (`SoloMuse.py`)**:
+5.  **Inference (Real-Time & Offline)**:
 
-      * This script loads the pre-trained weights into the single-step, stateful model.
-      * It listens for MIDI input to continuously update a chord vector representing the currently held notes.
-      * At each time step, it feeds the last generated note and the current chord vector to the model to predict the next note.
-      * The generated notes are played back using the `fluidsynth` library.
+      * **`SoloMuse.py`**: The main real-time application. It loads the pre-trained weights into the stateful model, listens for MIDI input to determine the current chord, and uses the model to predict and play the next note in the melody via a software synthesizer.
+      * **`testModel.py`**: The offline script. It reads chords from a specified MIDI file, generates a full-length solo from start to finish, and saves the result as a new MIDI file.
 
-5.  **Offline Generation (`testModel.py`)**:
+## Getting Started
 
-      * The `testModel.py` script provides a way to use the trained model without a MIDI controller.
-      * It reads the chord progression from an existing MIDI file, generates a new solo melody for it from start to finish, and saves the result as a new MIDI file containing both the original chords and the generated melody.
+Follow these steps to set up and run SoloMuse.
 
-## Usage
+### Prerequisites
 
-### 1\. Prerequisites
+  * Python 3.11
+  * A SoundFont file (`.sf2`) for audio synthesis.
 
-First, you need to have Python **3.11** and the required dependencies installed. You will also need a SoundFont file for audio output.
+### 1\. Clone the Repository
 
-**Dependencies**
+```bash
+git clone <repository-url>
+cd SoloMuse
+```
 
-Install the necessary Python packages using pip:
+### 2\. Install Dependencies
+
+Install all the required Python packages using the `requirements.txt` file.
 
 ```bash
 pip install -r requirements.txt
 ```
 
-The `requirements.txt` file includes:
+### 3\. Download MIDI Data
 
-```
-tensorflow
-numpy
-mido
-pretty_midi
-tqdm
-python-fluidsynth
-datasets
-```
-
-**SoundFont**
-
-The real-time generation script `SoloMuse.py` requires a SoundFont file (`.sf2`) to synthesize the audio. This project is configured to use `acoustic.sf2`. You can find many free SoundFont files online.
-
-### 2\. Data Preparation
-
-The model is trained on the GigaMIDI dataset. You can download the necessary MIDI files using the provided script:
+The model is trained on the GigaMIDI dataset. Run the included script to download the necessary files into the `data/midi_files/` directory.
 
 ```bash
 python scripts/midi_files_scrape.py
 ```
 
-### 3\. Training the Model
+### 4\. Train the Model
 
-A pre-trained model is already given in `saved_models/unrolled_lstm.weights.h5`.
+A pre-trained model is provided at `saved_models/unrolled_lstm.weights.h5`. You can use it to run the application immediately.
 
-To train the model on the downloaded data, delete `saved_models/unrolled_lstm.weights.h5`, and run the `train.py` script:
+To train the model from scratch on the data you just downloaded, run:
 
 ```bash
 python train.py
 ```
 
-This will:
+This script will:
 
-1.  Process the MIDI files in the `data/midi/` folder.
-2.  Cache the processed dataset in `data/cache/`.
+1.  Process all MIDI files in the data folder.
+2.  Create a cached, pre-processed dataset in `data/cache/`.
 3.  Train the unrolled LSTM model.
-4.  Save the trained weights to `unrolled_lstm.weights.h5`.
+4.  Save the new weights to `saved_models/unrolled_lstm.weights.h5`.
 
-If a weights file already exists, the script will skip training and load the existing weights.
+To force retraining even if a weights file exists, use the `--force-retrain` flag:
 
-### 4\. Running Real-Time Generation
+```bash
+python train.py --force-retrain
+```
 
-To start the real-time music generation, connect a MIDI keyboard and run `SoloMuse.py`:
+### 5\. Run the Application
+
+You can now use the trained model in one of two ways:
+
+#### A) Real-Time Generation
+
+Connect a MIDI keyboard or controller to your computer. Run the main script:
 
 ```bash
 python SoloMuse.py
 ```
 
-The script will detect your MIDI device and begin generating a melody in response to the chords you play. The generated music will be played back through FluidSynth.
+The script will prompt you to select your MIDI device. Once selected, play some chords (3+ notes) and SoloMuse will begin generating a melody in response.
 
-### 5\. Generating a Solo for an Existing MIDI File
+  * **Options**:
+      * `--midi-device "Your Device Name"`: Specify the MIDI device directly to skip the prompt.
+      * `--temperature 1.2`: Control the randomness of the output. Higher values are more random, lower values are more predictable.
 
-To generate a new melody for an existing MIDI file that contains chords:
+#### B) Offline Generation for an Existing MIDI File
 
-1.  Place your input MIDI file in the root directory (e.g., `Test.mid`).
-2.  Run the `testModel.py` script:
-
-<!-- end list -->
+To generate a new solo track for a MIDI file that already contains chords:
 
 ```bash
-python testModel.py
+python testModel.py --input-midi /path/to/your/input.mid --output-midi /path/to/your/output.mid
 ```
 
-The script will process `Test.mid`, generate a new solo track, and save the output to `output/Test_with_generated.mid`.
+The script will analyze the input file, generate a new melody, and save the result as a new MIDI file containing both the original chords and the AI-generated solo.
 
 ## Project Structure
 
@@ -135,7 +127,7 @@ The script will process `Test.mid`, generate a new solo track, and save the outp
 ├── train.py                # Script for training the LSTM model
 ├── testModel.py            # Script for offline generation over a MIDI file
 ├── requirements.txt        # Project dependencies
-├── .gitignore              # Files and directories to ignore
+├── README.md               # This README file
 ├── scripts/
 │   └── midi_files_scrape.py # Script to download the GigaMIDI dataset
 └── solomuse/
@@ -147,4 +139,4 @@ The script will process `Test.mid`, generate a new solo track, and save the outp
 
 ## License
 
-This project is licensed under the MIT License. See the LICENSE file for details.
+This project is licensed under the MIT License.
