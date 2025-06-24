@@ -1,7 +1,7 @@
 import os
 from datasets import load_dataset
 
-def download_full_gigamidi(subset="v1.0.0", output_dir="gigamidi_midifiles2"):
+def download_full_gigamidi(subset="v1.0.0", output_dir="data/midi_files"):
     """
     Downloads the full GigaMIDI dataset (all splits combined) for the specified subset.
 

@@ -1,11 +1,19 @@
-import time
-import numpy as np
 import mido
-import tensorflow as tf
+import time
 import fluidsynth
+import numpy as np
+import tensorflow as tf
+import argparse
+import sys
+import os
 
-from solomuse.config import LOWEST_PITCH, CHORD_VECTOR_SIZE, NOTE_VOCAB_SIZE, REST_TOKEN
-from solomuse.models import build_unrolled_model, build_single_step_model
+from solomuse.config import (
+    NOTE_VOCAB_SIZE, CHORD_VECTOR_SIZE,
+    LOWEST_PITCH, REST_TOKEN, STEPS_PER_QUARTER,
+    SOUNDFONT
+)
+
+from solomuse.models import build_single_step_model, build_unrolled_model
 
 def sample_note(prob_dist, temperature=1.0):
     """Randomly sample a note token from a probability distribution."""
@@ -14,92 +22,149 @@ def sample_note(prob_dist, temperature=1.0):
     softmax_dist = exp_dist / np.sum(exp_dist)
     return np.random.choice(range(len(prob_dist)), p=softmax_dist)
 
-def main():
-    WEIGHTS_PATH = "unrolled_lstm.weights.h5"
-    
-    # 1. Model Setup: Build unrolled model, load weights, then build single-step model and copy weights.
-    unrolled_model = build_unrolled_model()
-    unrolled_model.load_weights(WEIGHTS_PATH)
-    
-    rt_model = build_single_step_model()
-    for rt_layer in rt_model.layers:
-        try:
-            source_layer = unrolled_model.get_layer(rt_layer.name)
-            rt_layer.set_weights(source_layer.get_weights())
-            print(f"Copied weights for layer '{rt_layer.name}'")
-        except Exception as e:
-            print(f"Skipping layer '{rt_layer.name}'")
-    rt_model.get_layer("lstm").reset_states()
+def rt_generate_and_play(port_name, model, fs, temperature=1.0):
+    """
+    Main real-time generation loop.
+    Listens for MIDI input, updates a chord vector, and generates/plays notes.
+    """
+    print(f"\nOpening MIDI port: {port_name}")
+    try:
+        midi_input_port = mido.open_input(port_name)
+    except (IOError, OSError) as e:
+        print(f"Error opening MIDI port: {e}")
+        sys.exit(1)
 
-    # 2. Setup MIDI Input
-    input_ports = mido.get_input_names()
-    if input_ports:
-        inport = mido.open_input(input_ports[1])
-    else:
-        print("No MIDI input ports available. Exiting.")
-        return
+    print("Ready to play. Hold down a chord on your MIDI device...")
 
-    # 3. Setup FluidSynth for output.
-    fs = fluidsynth.Synth()
-    fs.start()
-    sfid = fs.sfload("acoustic.sf2")
-    fs.program_select(0, sfid, 0, 0)
-    fs.setting('synth.gain', 1.5)
+    # Initialize state
+    model.get_layer("lstm").reset_states()
+    current_chord_vector = np.zeros(CHORD_VECTOR_SIZE)
+    last_note_token = REST_TOKEN
+    held_notes = set()
 
-    # Initialize the chord vector (multi-hot), length = CHORD_VECTOR_SIZE.
-    chord_vector = np.zeros((CHORD_VECTOR_SIZE,), dtype=np.float32)
-    step_interval = 0.15  # Interval between note generation
+    # Timing
+    BEAT_DURATION_S = 0.5  # Corresponds to 120 BPM
+    STEP_DURATION_S = BEAT_DURATION_S / STEPS_PER_QUARTER
 
-    current_note = REST_TOKEN  # Start with REST
-    last_played_note = None  # To track currently played note
-
-    print("Starting real-time generation with MIDI input and FluidSynth output.")
-    print("Press Ctrl+C to stop.")
-    
     try:
         while True:
-            # 4. Update the chord vector from incoming MIDI messages.
-            for msg in inport.iter_pending():
+            # Consume all pending MIDI messages
+            for msg in midi_input_port.iter_pending():
                 if msg.type == 'note_on' and msg.velocity > 0:
-                    idx = msg.note - LOWEST_PITCH
-                    if 0 <= idx < CHORD_VECTOR_SIZE:
-                        chord_vector[idx] = 1.0
+                    held_notes.add(msg.note)
                 elif msg.type == 'note_off' or (msg.type == 'note_on' and msg.velocity == 0):
-                    idx = msg.note - LOWEST_PITCH
-                    if 0 <= idx < CHORD_VECTOR_SIZE:
-                        chord_vector[idx] = 0.0
+                    held_notes.discard(msg.note)
 
-            # 5. Generate next note using the current chord vector.
-            chord_input = chord_vector.reshape((1, 1, CHORD_VECTOR_SIZE))
-            note_input = np.array([[current_note]], dtype=np.int32)
-            preds, _, _ = rt_model.predict([note_input, chord_input], verbose=0)
-            preds = preds[0]  # shape: (NOTE_VOCAB_SIZE,)
-            next_note = sample_note(preds, temperature=1.0)
+            # Update chord vector
+            current_chord_vector.fill(0)
+            for note in held_notes:
+                if LOWEST_PITCH <= note < LOWEST_PITCH + CHORD_VECTOR_SIZE:
+                    idx = note - LOWEST_PITCH
+                    current_chord_vector[idx] = 1.0
 
-            # If next_note is the same as last_played_note, sustain it
-            if next_note != last_played_note:
-                # Turn off the last played note if it's different
-                if last_played_note is not None and last_played_note != REST_TOKEN:
-                    fs.noteoff(0, last_played_note + LOWEST_PITCH)
-                
-                # Play new note if it's not a rest
-                if next_note != REST_TOKEN:
-                    midi_pitch = next_note + LOWEST_PITCH
-                    fs.noteon(0, midi_pitch, 64)
+            # Prepare model inputs
+            chord_input = current_chord_vector.reshape((1, 1, CHORD_VECTOR_SIZE)).astype(np.float32)
+            note_input = np.array([[last_note_token]], dtype=np.int32)
 
-                # Update last played note
-                last_played_note = next_note
+            # Predict next note
+            preds, _, _ = model.predict([note_input, chord_input], verbose=0)
+            next_note_token = sample_note(preds[0], temperature=temperature)
 
-            # Update the current note for the next step
-            current_note = next_note
+            # Play the note
+            if next_note_token != REST_TOKEN:
+                midi_pitch = next_note_token + LOWEST_PITCH
+                fs.noteon(0, midi_pitch, 100)
+                time.sleep(STEP_DURATION_S * 0.9) # Play for most of the step duration
+                fs.noteoff(0, midi_pitch)
+            else:
+                time.sleep(STEP_DURATION_S)
 
-            # Wait until next step.
-            time.sleep(step_interval)
+            # Update last note for next iteration
+            last_note_token = next_note_token
+
     except KeyboardInterrupt:
-        print("Real-time generation stopped by user.")
+        print("\nStopping...")
     finally:
-        inport.close()
+        midi_input_port.close()
         fs.delete()
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(
+        description="Real-time chord-conditioned music generation with SoloMuse."
+    )
+    parser.add_argument(
+        '--soundfont',
+        type=str,
+        default=SOUNDFONT,
+        help=f"Path to the SoundFont file (.sf2). Default: {SOUNDFONT}"
+    )
+    parser.add_argument(
+        '--midi-device',
+        type=str,
+        help="Specify the name of the MIDI input device to use."
+    )
+    parser.add_argument(
+        '--temperature',
+        type=float,
+        default=1.1,
+        help="Controls the randomness of the generated notes (e.g., 0.8=less random, 1.2=more random)."
+    )
+    args = parser.parse_args()
+
+    available_ports = mido.get_input_names()
+
+    # Check for available ports
+    if not available_ports:
+        print("Error: No MIDI input devices found. Please connect a MIDI device.")
+        sys.exit(1)
+
+    # Determine which MIDI port to use
+    port_name = None
+    if args.midi_device:
+        if args.midi_device in available_ports:
+            port_name = args.midi_device
+        else:
+            print(f"Error: Specified MIDI device '{args.midi_device}' not found.")
+            print("Please choose from the available devices:")
+            for port in available_ports:
+                print(f"  - {port}")
+            sys.exit(1)
+    else:
+        # If no device is specified, prompt the user
+        print("Please select a MIDI input device:")
+        for i, port in enumerate(available_ports):
+            print(f"  [{i}]: {port}")
+        try:
+            selection = int(input(f"Enter number (0-{len(available_ports)-1}): "))
+            if 0 <= selection < len(available_ports):
+                port_name = available_ports[selection]
+            else:
+                raise ValueError
+        except (ValueError, IndexError):
+            print("Invalid selection. Exiting.")
+            sys.exit(1)
+
+    # Load model weights
+    WEIGHTS_PATH = "./saved_models/unrolled_lstm.weights.h5"
+    unrolled_model = build_unrolled_model()
+    if not os.path.exists(WEIGHTS_PATH):
+        raise FileNotFoundError(f"Trained weights not found: {WEIGHTS_PATH}")
+    unrolled_model.load_weights(WEIGHTS_PATH)
+
+    rt_model = build_single_step_model()
+    for rt_layer in rt_model.layers:
+        lname = rt_layer.name
+        try:
+            src_layer = unrolled_model.get_layer(lname)
+            rt_layer.set_weights(src_layer.get_weights())
+        except:
+            pass
+
+    # Set up FluidSynth
+    fs = fluidsynth.Synth()
+    fs.start()
+    sfid = fs.sfload(args.soundfont)
+    fs.program_select(0, sfid, 0, 0)
+
+    # Start the main loop
+    rt_generate_and_play(port_name, rt_model, fs, temperature=args.temperature)

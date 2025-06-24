@@ -1,6 +1,5 @@
-# add_generated_notes.py
-
 import os
+import argparse  # Import the argparse library
 import numpy as np
 import pretty_midi
 import tensorflow as tf
@@ -9,7 +8,7 @@ import solomuse.data_preparation as data_preparation
 import solomuse.models as models
 
 # Configuration constants (could also be imported from config.py)
-WEIGHTS_PATH       = "unrolled_lstm.weights.h5"
+WEIGHTS_PATH       = "./saved_models/unrolled_lstm.weights.h5"
 REST_TOKEN         = 45           # rest token index
 LOWEST_PITCH       = 40           # token 0 -> MIDI note 40
 STEPS_PER_QUARTER  = 4            # e.g., 1/16 note resolution
@@ -185,13 +184,38 @@ def add_generated_notes_to_midi(input_midi_path, output_midi_path, temperature=1
     pm_out.instruments.append(chord_instrument)
     pm_out.instruments.append(lead_instrument)
 
+    # Ensure the output directory exists
+    output_dir = os.path.dirname(output_midi_path)
+    if output_dir and not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
     pm_out.write(output_midi_path)
     print(f"Created new MIDI with chords and generated notes: {output_midi_path}")
 
-###############################################################################
-# Example usage
-###############################################################################
 if __name__ == "__main__":
-    input_mid  = "TP.mid"            # Input MIDI file containing the original chord information.
-    output_mid = "output/TP_with_generated.mid"  # Output file to be created.
-    add_generated_notes_to_midi(input_mid, output_mid, temperature=1.0)
+    # Set up command-line argument parsing
+    parser = argparse.ArgumentParser(
+        description="Generate a new MIDI file with a solo melody based on the chords of an input MIDI file."
+    )
+    parser.add_argument(
+        "--input-midi",
+        type=str,
+        required=True,
+        help="Path to the input MIDI file containing chords."
+    )
+    parser.add_argument(
+        "--output-midi",
+        type=str,
+        required=True,
+        help="Path to save the output MIDI file."
+    )
+    parser.add_argument(
+        "--temperature",
+        type=float,
+        default=1.0,
+        help="Controls the randomness of note selection. Higher values (e.g., 1.2) are more random, lower values (e.g., 0.8) are more predictable."
+    )
+
+    args = parser.parse_args()
+
+    add_generated_notes_to_midi(args.input_midi, args.output_midi, args.temperature)

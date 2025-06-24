@@ -50,7 +50,7 @@ def build_unrolled_model():
             layers.Dense(LSTM_UNITS, activation='relu'),
             name=f"dense_{i}"
         )(x)
-    # x now passes through five non-linear transformations
+    # x now passes through three non-linear transformations
     
     # Final projection to the note vocabulary and softmax activation
     note_logits = layers.TimeDistributed(

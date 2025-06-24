@@ -33,3 +33,5 @@ LSTM_UNITS       = 64
 BATCH_SIZE = 32
 EPOCHS = 15
 LEARNING_RATE = 0.001
+
+SOUNDFONT = "./soundfonts/acoustic.sf2"

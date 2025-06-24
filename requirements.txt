@@ -4,5 +4,5 @@ numpy
 mido
 pretty_midi
 tqdm
-python-fluidsynth
+pyfluidsynth
 datasets

@@ -1,18 +1,15 @@
-# main.py
+# train.py
 
 import os
+import argparse
 import numpy as np
 import tensorflow as tf
 
 from solomuse.config import (
     MIDI_FOLDER,
-    NUM_FILES,
     SEQUENCE_LENGTH,
     BATCH_SIZE,
-    EPOCHS,
-    NOTE_VOCAB_SIZE,
-    REST_TOKEN,
-    LOWEST_PITCH
+    EPOCHS
 )
 from solomuse.data_preparation import build_training_dataset
 from solomuse.models import build_unrolled_model, build_single_step_model
@@ -24,14 +21,18 @@ def sample_note(prob_dist, temperature=1.1):
     softmax_dist = exp_dist / np.sum(exp_dist)
     return np.random.choice(range(len(prob_dist)), p=softmax_dist)
 
-def main():
+# Modified main to accept the parsed arguments
+def main(args):
     ############################################################################
     # 1) Load or Build Dataset
     ############################################################################
     DATASET_CACHE = "data/cache/cached_dataset.npz"
-    
-    if not os.path.exists(DATASET_CACHE):
-        print("No cached dataset found. Building dataset from MIDI folder...")
+
+    # You might want to make the cache path dependent on the data_dir to avoid mixing datasets
+    if not os.path.exists(DATASET_CACHE) or args.force_retrain:
+        if args.force_retrain:
+            print("Forcing data reprocessing...")
+        print(f"No cached dataset found. Building dataset from MIDI folder: {MIDI_FOLDER}")
         X_notes, X_chords, y_notes = build_training_dataset(
             MIDI_FOLDER,
             T=SEQUENCE_LENGTH
@@ -39,6 +40,11 @@ def main():
         if X_notes is None:
             print("No data found. Exiting.")
             return
+        
+        cache_dir = os.path.dirname(DATASET_CACHE)
+        if not os.path.exists(cache_dir):
+            os.makedirs(cache_dir)
+            
         np.savez(DATASET_CACHE, X_notes=X_notes, X_chords=X_chords, y_notes=y_notes)
         print(f"Dataset saved to {DATASET_CACHE}")
     else:
@@ -50,26 +56,31 @@ def main():
         print("Dataset loaded successfully.")
 
     print("Dataset shapes:")
-    print("X_notes:", X_notes.shape)   
-    print("X_chords:", X_chords.shape) 
+    print("X_notes:", X_notes.shape)
+    print("X_chords:", X_chords.shape)
     print("y_notes:", y_notes.shape)
 
     ############################################################################
     # 2) Train or Load the Unrolled Model Weights
     ############################################################################
-    WEIGHTS_PATH = "saved_models/unrolled_lstm.weights.h5"
+    WEIGHTS_PATH = "./saved_models/unrolled_lstm.weights.h5"
     
     # Build the unrolled model (same architecture either way)
     unrolled_model = build_unrolled_model()
     unrolled_model.summary()
 
-    if os.path.exists(WEIGHTS_PATH):
-        # If weights file already exists, skip training
+    # The logic is now controlled by the force_retrain flag
+    if not args.force_retrain and os.path.exists(WEIGHTS_PATH):
+        # If weights exist AND we are not forcing a retrain
         print(f"Found existing weights at {WEIGHTS_PATH}, skipping training.")
         unrolled_model.load_weights(WEIGHTS_PATH)
     else:
-        # If not, train offline once
-        print("No trained weights found. Training unrolled LSTM model...")
+        # If weights don't exist OR we are forcing a retrain
+        if args.force_retrain:
+            print("Forcing model retraining...")
+        else:
+            print("No trained weights found. Training unrolled LSTM model...")
+            
         y_notes_expanded = np.expand_dims(y_notes, axis=-1)
         
         unrolled_model.fit(
@@ -101,6 +112,17 @@ def main():
             print(f"Skipping layer '{lname}'")
 
 
-
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(
+        description="Train the SoloMuse LSTM model on a directory of MIDI files."
+    )
+
+    # Correct way to implement a boolean flag
+    parser.add_argument(
+        '--force-retrain',
+        action='store_true', # This makes it a flag; True if present, False if not
+        help="If set, forces retraining even if a weights file already exists."
+    )
+
+    args = parser.parse_args()
+    main(args)
