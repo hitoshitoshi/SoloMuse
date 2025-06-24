@@ -48,7 +48,7 @@ Follow these steps to set up and run SoloMuse.
 ### 1\. Clone the Repository
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/hitoshitoshi/SoloMuse.git
 cd SoloMuse
 ```
 
