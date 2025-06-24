@@ -49,7 +49,7 @@ The project is composed of several key components:
 
 ### 1\. Prerequisites
 
-First, you need to have Python and the required dependencies installed. You will also need a SoundFont file for audio output.
+First, you need to have Python **3.11** and the required dependencies installed. You will also need a SoundFont file for audio output.
 
 **Dependencies**
 
